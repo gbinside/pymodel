@@ -1,5 +1,5 @@
 # coding=utf-8
-__author__ = 'roberto'
+__author__ = 'roberto gambuzzi (c) 2013'
 
 import sqlite3 as sqlite
 import collections
