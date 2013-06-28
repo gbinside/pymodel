@@ -228,6 +228,11 @@ def test2():
     assert p.get('raw') == {'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']}
     assert 'Attore' in p.get('cast')
     assert 'Regista' in p.get('cast')
+    try:
+        p.get('premi')
+        assert False
+    except KeyError:
+        assert True
     assert p.get('premi', {}) == {}
 
 
