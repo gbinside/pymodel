@@ -1,7 +1,7 @@
+# coding=utf-8
 __author__ = 'roberto'
 
 import sqlite3 as sqlite
-import json
 import collections
 
 
@@ -10,9 +10,9 @@ class RecordNotFoundException(Exception):
 
 
 class Abstract(object):
-    #tablename = 'prodotti_flat'
-    #chiave = 'sku'
-    #tipo_chiave = 'VARCHAR(255)'
+    #_tablename = 'prodotti_flat'
+    #_chiave = 'sku'
+    #_tipo_chiave = 'VARCHAR(255)'
 
     def _execute(self, query, vals=None):
         if vals:
@@ -29,19 +29,22 @@ class Abstract(object):
 
     def _create_table(self):
         self._execute(
-            'CREATE TABLE ' + self.tablename + ' (' + self.chiave + ' ' + self.tipo_chiave +
+            'CREATE TABLE ' + self._tablename + ' (' + self._chiave + ' ' + self._tipo_chiave +
             ' PRIMARY KEY )')
         return self
 
-    def __init__(self, connessione, commit_on_del=True, json_fields=[]):
+    def __init__(self, connessione, encoding="iso-8859-1", commit_on_del=True, field_managers=None):
         self._conn = connessione
         self._curs = connessione.cursor()
-        self._encoding = "iso-8859-1"
+        self._encoding = encoding
         self._commit_on_del = commit_on_del
         self._data = {}
-        self._json_fields = json_fields
+        if field_managers:
+            self._field_managers = field_managers
+        if not hasattr(self, '_field_managers'):
+            self._field_managers = {}
         try:
-            self._execute('SELECT COUNT(*) FROM ' + self.tablename)
+            self._execute('SELECT COUNT(*) FROM ' + self._tablename)
         except sqlite.OperationalError:
             self._create_table()
         self.count = 0
@@ -49,12 +52,12 @@ class Abstract(object):
         if row:
             for x in row:
                 self.count = x
-        self._execute("PRAGMA table_info(" + self.tablename + ")")
+        self._execute("PRAGMA table_info(" + self._tablename + ")")
         self._fields = [(x['name'] if type(x) is dict else x[1]) for x in self._fetchall()]
 
     def set(self, k, v):
         if k not in self._fields:
-            self._execute("ALTER TABLE " + self.tablename + " ADD COLUMN " + k)
+            self._execute("ALTER TABLE " + self._tablename + " ADD COLUMN " + k)
             self._fields.append(k)
         self._data[k] = v
         return self
@@ -71,18 +74,18 @@ class Abstract(object):
         valori = []
         for k, v in self._data.items():
             campi.append(k)
-            if k in self._json_fields:
-                if v is not None:
-                    try:
-                        v = json.dumps(v, encoding=self._encoding)
-                    except:
-                        print v
-                        raise
-                else:
-                    v = json.dumps({})
+            if k in self._field_managers:
+                helper = self._field_managers[k]
+                try:
+                    v = helper.dumps(v, encoding=self._encoding)
+                except TypeError:
+                    v = helper.dumps(v)
+                except:
+                    print v
+                    raise
             valori.append(v)
         interrog = ','.join(['?'] * len(valori))
-        sql = "INSERT OR REPLACE INTO " + self.tablename + " (" + ','.join(campi) + ") VALUES (" + interrog + ")"
+        sql = "INSERT OR REPLACE INTO " + self._tablename + " (" + ','.join(campi) + ") VALUES (" + interrog + ")"
         self._execute(sql, valori)
         if commit:
             self._conn.commit()
@@ -92,25 +95,31 @@ class Abstract(object):
         self._data = {}
         return self
 
-    def load(self, sku):
-        sql = "SELECT * FROM " + self.tablename + " WHERE " + self.chiave + " = ?"
-        self._execute(sql, (sku,))
+    def load(self, value, field=None):
+        if field is None:
+            field = self._chiave
+        sql = "SELECT * FROM " + self._tablename + " WHERE " + field + " = ?"
+        self._execute(sql, (value,))
         ret = self._fetchone()
         if ret:
             if type(ret) is dict:
                 self._data = dict(ret)
             else:
                 self._data = dict(zip(self._fields, ret))
-            for k in self._json_fields:
-                if k in self._data and self._data[k]:
-                    self._data[k] = json.loads(self._data[k], object_pairs_hook=collections.OrderedDict)
+            for k in self._field_managers:
+                helper = self._field_managers[k]
+                if k in self._data:
+                    try:
+                        self._data[k] = helper.loads(self._data[k], object_pairs_hook=collections.OrderedDict)
+                    except TypeError:
+                        self._data[k] = helper.loads(self._data[k])
         else:
             raise RecordNotFoundException
         return self
 
     def delete(self):
-        sql = "DELETE FROM " + self.tablename + " WHERE " + self.chiave + " = ?"
-        self._execute(sql, (self._data[self.chiave],))
+        sql = "DELETE FROM " + self._tablename + " WHERE " + self._chiave + " = ?"
+        self._execute(sql, (self._data[self._chiave],))
         return self
 
     def __repr__(self):
@@ -121,7 +130,7 @@ class Abstract(object):
             self._conn.commit()
 
     def collection_keys(self, sql=None, vals=None):
-        _sql = "SELECT " + self.chiave + " FROM " + self.tablename
+        _sql = "SELECT " + self._chiave + " FROM " + self._tablename
         if sql:
             _sql = _sql + " WHERE " + sql
         self._execute(_sql, vals)
@@ -134,20 +143,25 @@ class Abstract(object):
         else:
             return []
 
+    def getData(self):
+        return self._data
+
 
 def test():
     import os
+    import tempfile
 
     class Prodotto(Abstract):
-        tablename = 'prodotti_flat'
-        chiave = 'sku'
-        tipo_chiave = 'VARCHAR(255)'
+        _tablename = 'prodotti_flat'
+        _chiave = 'sku'
+        _tipo_chiave = 'VARCHAR(255)'
 
-    try:
-        os.remove("/tmp/test.sqlite")
-    except:
-        pass
-    out_conn = sqlite.connect("test.sqlite", detect_types=sqlite.PARSE_DECLTYPES)
+    handle, db_filename = tempfile.mkstemp()  # "/tmp/test.sqlite"
+    print db_filename
+    os.close(handle)
+
+    os.remove(db_filename)
+    out_conn = sqlite.connect(db_filename, detect_types=sqlite.PARSE_DECLTYPES)
     out_conn.text_factory = str
 
     self = Prodotto(out_conn)
@@ -170,16 +184,53 @@ def test():
     self.set('sku', 'abc')
     self.save()
 
-    print self.collection_keys("name LIKE ?", ("% prova%",), )
+    assert ['123', 'abc'] == self.collection_keys("name LIKE ?", ("% prova%",), )
 
     p.delete()
     try:
-        p = self(out_conn).load('123')
+        p = Prodotto(out_conn).load('123')
         ok = True
     except RecordNotFoundException:
         ok = False
     assert not ok
 
 
+def test2():
+    # FIELD MANAGER
+    import os
+    import tempfile
+    import json
+    import cPickle
+
+    class Prodotto(Abstract):
+        _tablename = 'prodotti_flat'
+        _chiave = 'sku'
+        _tipo_chiave = 'VARCHAR(255)'
+        _field_managers = {'premi': json, 'cast': json, 'raw': cPickle}
+
+    handle, db_filename = tempfile.mkstemp()
+    print db_filename
+    os.close(handle)
+
+    os.remove(db_filename)
+    out_conn = sqlite.connect(db_filename, detect_types=sqlite.PARSE_DECLTYPES)
+    out_conn.text_factory = str
+
+    self = Prodotto(out_conn)
+    self.set('name', 'prodotto di prova')
+    self.set('sku', '123')
+    self.set('cast', {'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']})
+    self.set('raw', {'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']})
+    self.save()
+
+    p = Prodotto(out_conn)
+    p.load('123')
+    assert p.get('raw') == {'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']}
+    assert 'Attore' in p.get('cast')
+    assert 'Regista' in p.get('cast')
+    assert p.get('premi', {}) == {}
+
+
 if __name__ == "__main__":
     test()
+    test2()
