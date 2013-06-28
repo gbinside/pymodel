@@ -213,8 +213,16 @@ def test2():
     os.close(handle)
 
     os.remove(db_filename)
+
+    def dict_factory(cursor, row):
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            d[col[0].lower()] = row[idx]
+        return d
+
     out_conn = sqlite.connect(db_filename, detect_types=sqlite.PARSE_DECLTYPES)
     out_conn.text_factory = str
+    out_conn.row_factory = dict_factory
 
     self = Prodotto(out_conn)
     self.set('name', 'prodotto di prova')
@@ -225,6 +233,17 @@ def test2():
 
     p = Prodotto(out_conn)
     p.load('123')
+    assert p.get('raw') == {'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']}
+    assert 'Attore' in p.get('cast')
+    assert 'Regista' in p.get('cast')
+    try:
+        p.get('premi')
+        assert False
+    except KeyError:
+        assert True
+    assert p.get('premi', {}) == {}
+
+    p.load('prodotto di prova', 'name')
     assert p.get('raw') == {'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']}
     assert 'Attore' in p.get('cast')
     assert 'Regista' in p.get('cast')
