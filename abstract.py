@@ -3,11 +3,7 @@ __author__ = 'roberto gambuzzi (c) 2013'
 
 import sqlite3 as sqlite
 import collections
-
-
-class RecordNotFoundException(Exception):
-    pass
-
+from __init__ import RecordNotFoundException
 
 class Abstract(object):
     #_tablename = 'prodotti_flat'
