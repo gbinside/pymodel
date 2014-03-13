@@ -5,6 +5,7 @@ import sqlite3 as sqlite
 import collections
 from __init__ import RecordNotFoundException
 
+
 class Abstract(object):
     #_tablename = 'prodotti_flat'
     #_chiave = 'sku'
@@ -143,7 +144,9 @@ class Abstract(object):
         return self._data
 
     def set_data(self, **dizio):
-        self._data.update(dizio)
+        for k, v in dizio.items():
+            self.set(k, v)
+        return self
 
 
 def test():
