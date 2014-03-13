@@ -125,10 +125,10 @@ class Abstract(object):
         if self._commit_on_del:
             self._conn.commit()
 
-    def collection_keys(self, sql=None, vals=None):
+    def collection_keys(self, where_sql=None, vals=None):
         _sql = "SELECT " + self._chiave + " FROM " + self._tablename
-        if sql:
-            _sql = _sql + " WHERE " + sql
+        if where_sql:
+            _sql = _sql + " WHERE " + where_sql
         self._execute(_sql, vals)
         ret = self._fetchall()
         if ret:
@@ -139,8 +139,11 @@ class Abstract(object):
         else:
             return []
 
-    def getData(self):
+    def get_data(self):
         return self._data
+
+    def set_data(self, **dizio):
+        self._data.update(dizio)
 
 
 def test():
