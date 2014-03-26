@@ -88,6 +88,9 @@ class Abstract(object):
             self._conn.commit()
         return self
 
+    def commit(self):
+        self._conn.commit()
+
     def new(self):
         self._data = {}
         return self
