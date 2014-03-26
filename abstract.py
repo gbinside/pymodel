@@ -3,7 +3,10 @@ __author__ = 'roberto gambuzzi (c) 2013'
 
 import sqlite3 as sqlite
 import collections
-from __init__ import RecordNotFoundException
+
+
+class RecordNotFoundException(Exception):
+    pass
 
 
 class Abstract(object):
@@ -230,10 +233,9 @@ def test2():
     out_conn.row_factory = dict_factory
 
     self = Prodotto(out_conn)
-    self.set('name', 'prodotto di prova')
-    self.set('sku', '123')
-    self.set('cast', {'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']})
-    self.set('raw', {'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']})
+    self.set_data(name='prodotto di prova', sku='123',
+                  cast={'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']},
+                  raw={'Attore': ['Brad Pitt', 'Totò'], 'Regista': ['Clint Eastwood']})
     self.save()
 
     p = Prodotto(out_conn)
