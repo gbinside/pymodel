@@ -41,6 +41,8 @@ class Abstract(object):
         self._data = {}
         if field_managers:
             self._field_managers = field_managers
+        if not hasattr(self, '_prefix'):
+            self._prefix = None
         if not hasattr(self, '_field_managers'):
             self._field_managers = {}
         try:
