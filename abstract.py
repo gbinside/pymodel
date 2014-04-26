@@ -3,7 +3,7 @@ __author__ = 'roberto gambuzzi (c) 2013'
 
 import sqlite3 as sqlite
 import collections
-
+import copy
 
 class RecordNotFoundException(Exception):
     pass
@@ -39,6 +39,7 @@ class Abstract(object):
         self._encoding = encoding
         self._commit_on_del = commit_on_del
         self._data = {}
+        self._original_data = None
         if field_managers:
             self._field_managers = field_managers
         if not hasattr(self, '_prefix'):
@@ -72,6 +73,8 @@ class Abstract(object):
         return ret
 
     def save(self, commit=True):
+        if self._original_data == self._data:
+            return self
         campi = []
         valori = []
         for k, v in self._data.items():
@@ -120,6 +123,7 @@ class Abstract(object):
                         self._data[k] = helper.loads(self._data[k])
         else:
             raise RecordNotFoundException
+        self._original_data = copy.deepcopy(self._data)
         return self
 
     def delete(self):
