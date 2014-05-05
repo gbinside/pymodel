@@ -92,6 +92,7 @@ class Abstract(object):
         interrog = ','.join(['?'] * len(valori))
         sql = "INSERT OR REPLACE INTO " + self._tablename + " (" + ','.join(campi) + ") VALUES (" + interrog + ")"
         self._execute(sql, valori)
+        self._original_data = copy.deepcopy(self._data)
         if commit:
             self._conn.commit()
         return self
