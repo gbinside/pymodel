@@ -1,0 +1,11 @@
+{
+    "name": "gbinside/pymodel",
+    "license": "OSL-3.0",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Roberto Gambuzzi",
+            "email": "gbinside@gmail.com"
+        }
+    ],
+}
