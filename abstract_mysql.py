@@ -1,13 +1,10 @@
 # coding=utf-8
 __author__ = 'roberto gambuzzi (c) 2014'
 
-import MySQLdb as db
+import MySQLdb as Db
 import collections
 import copy
-import sys
-
-class RecordNotFoundException(Exception):
-    pass
+from abstract import RecordNotFoundException
 
 
 class Abstract(object):
@@ -49,7 +46,7 @@ class Abstract(object):
             self._field_managers = {}
         try:
             self._execute('SELECT COUNT(*) FROM ' + self._tablename)
-        except db.ProgrammingError:
+        except Db.ProgrammingError:
             self._create_table()
         self.count = 0
         row = self._fetchone()
@@ -172,7 +169,7 @@ def test():
         _chiave = 'sku'
         _tipo_chiave = 'VARCHAR(255)'
 
-    out_conn = db.connect('localhost', 'root', 'password', 'test')
+    out_conn = Db.connect('localhost', 'root', 'password', 'test')
     out_conn.text_factory = str
 
     self = Prodotto(out_conn)
@@ -225,7 +222,7 @@ def test2():
             d[col[0].lower()] = row[idx]
         return d
 
-    out_conn = db.connect('localhost', 'root', 'password', 'test')
+    out_conn = Db.connect('localhost', 'root', 'password', 'test')
     out_conn.text_factory = str
     out_conn.row_factory = dict_factory
 
