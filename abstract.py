@@ -1,18 +1,34 @@
 # coding=utf-8
-__author__ = 'roberto gambuzzi (c) 2013'
-
 import sqlite3 as sqlite
 import collections
 import copy
+
+__author__ = 'roberto gambuzzi (c) 2015'
+
+
+def dict_factory(cursor, row):
+    d = collections.OrderedDict()
+    for idx, col in enumerate(cursor.description):
+        d[col[0].lower()] = row[idx]
+    return d
+
+
+def create_sqlite_connection(db_filename):
+    out_conn = sqlite.connect(db_filename, detect_types=sqlite.PARSE_DECLTYPES)
+    out_conn.text_factory = str
+    out_conn.row_factory = dict_factory
+    return out_conn
+
 
 class RecordNotFoundException(Exception):
     pass
 
 
 class Abstract(object):
-    #_tablename = 'prodotti_flat'
-    #_chiave = 'sku'
-    #_tipo_chiave = 'VARCHAR(255)'
+    # _tablename = 'prodotti_flat'
+    # _chiave = 'sku'
+    # _tipo_chiave = 'VARCHAR(255)'
+    _autoincrement = ''
 
     def _execute(self, query, vals=None):
         if vals:
@@ -30,7 +46,7 @@ class Abstract(object):
     def _create_table(self):
         self._execute(
             'CREATE TABLE ' + self._tablename + ' (' + self._chiave + ' ' + self._tipo_chiave +
-            ' PRIMARY KEY )')
+            ' PRIMARY KEY ' + self._autoincrement + ')')
         return self
 
     def __init__(self, connessione, encoding="iso-8859-1", commit_on_del=True, field_managers=None):
@@ -38,7 +54,7 @@ class Abstract(object):
         self._curs = connessione.cursor()
         self._encoding = encoding
         self._commit_on_del = commit_on_del
-        self._data = {}
+        self._data = collections.OrderedDict()
         self._original_data = None
         if field_managers:
             self._field_managers = field_managers
@@ -56,7 +72,15 @@ class Abstract(object):
             for x in row:
                 self.count = x
         self._execute("PRAGMA table_info(" + self._tablename + ")")
-        self._fields = [(x['name'] if type(x) is dict else x[1]) for x in self._fetchall()]
+        self._fields = [(x['name'] if 'name' in x else x[1]) for x in self._fetchall()]
+
+    def set_key(self, v):
+        self._data[self._chiave] = v
+        return self
+
+    @classmethod
+    def get_key(cls):
+        return cls._chiave
 
     def set(self, k, v):
         if k not in self._fields:
@@ -160,6 +184,19 @@ class Abstract(object):
         for k, v in dizio.items():
             self.set(k, v)
         return self
+
+    def collection(self, where_sql=None, vals=None, orderby=None):
+        _sql = "SELECT * FROM " + self._tablename
+        if where_sql:
+            _sql = _sql + " WHERE " + where_sql
+        if orderby:
+            _sql = _sql + " ORDER BY " + orderby
+        self._execute(_sql, vals)
+        ret = self._fetchall()
+        if ret:
+            return ret
+        else:
+            return []
 
 
 def test():

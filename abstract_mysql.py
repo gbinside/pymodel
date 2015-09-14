@@ -1,16 +1,18 @@
 # coding=utf-8
 __author__ = 'roberto gambuzzi (c) 2014'
-
-import MySQLdb as Db
+try:
+    import MySQLdb as Db
+except ImportError:
+    pass  # @todo skip import this file
 import collections
 import copy
 from abstract import RecordNotFoundException
 
 
 class Abstract(object):
-    #_tablename = 'prodotti_flat'
-    #_chiave = 'sku'
-    #_tipo_chiave = 'VARCHAR(255)'
+    # _tablename = 'prodotti_flat'
+    # _chiave = 'sku'
+    # _tipo_chiave = 'VARCHAR(255)'
 
     def _execute(self, query, vals=None):
         if vals:
