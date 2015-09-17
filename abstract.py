@@ -1,4 +1,5 @@
 # coding=utf-8
+from sqlite3 import OperationalError
 import sqlite3 as sqlite
 import collections
 import copy
@@ -135,10 +136,10 @@ class Abstract(object):
         self._execute(sql, (value,))
         ret = self._fetchone()
         if ret:
-            if type(ret) is dict:
-                self._data = dict(ret)
+            if type(ret) is collections.OrderedDict:
+                self._data = collections.OrderedDict(ret)
             else:
-                self._data = dict(zip(self._fields, ret))
+                self._data = collections.OrderedDict(zip(self._fields, ret))
             for k in self._field_managers:
                 helper = self._field_managers[k]
                 if k in self._data:
